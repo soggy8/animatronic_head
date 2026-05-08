@@ -8,3 +8,4 @@ requests>=2.31.0
 python-dotenv>=1.0.1
 opencv-python>=4.10.0
 mediapipe>=0.10.14
+flask>=3.0.0

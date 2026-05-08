@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Talk to Nikola{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="logo">🤖</div>
+  <h1>Nikola</h1>
+  <h2>Animatronic Head</h2>
+
+  <hr class="divider">
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/">
+    <label for="name">What is your name?</label>
+    <input
+      type="text"
+      id="name"
+      name="name"
+      placeholder="Enter your name"
+      autocomplete="off"
+      autofocus
+    >
+    <button type="submit" class="btn btn-green">Talk to Nikola →</button>
+  </form>
+</div>
+{% endblock %}

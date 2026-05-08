@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Nikola</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #30363d;
+    }
+    .header-title { font-size: 1.2rem; font-weight: 700; }
+    .header a {
+      color: #8b949e;
+      text-decoration: none;
+      font-size: 0.88rem;
+      transition: color 0.15s;
+    }
+    .header a:hover { color: #e6edf3; }
+
+    /* ── Top row: Speaking Now + Up Next ── */
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+
+    .panel-name    { font-weight: 600; font-size: 1rem; margin-bottom: 0.3rem; }
+    .panel-message { color: #8b949e; font-size: 0.88rem; line-height: 1.45; }
+    .panel-empty   { color: #484f58; font-style: italic; font-size: 0.88rem; }
+    .panel-actions { margin-top: 0.85rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      padding: 0.38rem 0.8rem;
+    }
+    .btn:hover  { opacity: 0.8; }
+    .btn-green  { background: #238636; color: #fff; }
+    .btn-red    { background: #da3633; color: #fff; }
+    .btn-gray   { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.65rem;
+    }
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+    }
+    .section-actions { display: flex; gap: 0.5rem; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      background: #21262d;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #8b949e;
+      padding: 0.65rem 1rem;
+      text-align: left;
+    }
+
+    td {
+      padding: 0.72rem 1rem;
+      border-top: 1px solid #21262d;
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.015); }
+
+    .td-check   { width: 38px; }
+    .td-name    { font-weight: 500; white-space: nowrap; }
+    .td-message { color: #8b949e; }
+    .td-time    { color: #484f58; font-size: 0.8rem; white-space: nowrap; }
+    .td-actions { white-space: nowrap; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: #388bfd;
+      width: 15px;
+      height: 15px;
+    }
+
+    .bulk-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 1rem;
+      background: #0d1117;
+      border-top: 1px solid #30363d;
+    }
+    .bulk-left   { display: flex; align-items: center; gap: 0.6rem; }
+    .bulk-count  { font-size: 0.82rem; color: #8b949e; min-width: 70px; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-done     { background: rgba(35,134,54,0.15); color: #3fb950; border: 1px solid rgba(35,134,54,0.4); }
+    .badge-declined { background: rgba(218,54,51,0.15); color: #f85149; border: 1px solid rgba(218,54,51,0.4); }
+
+    .empty-cell { color: #484f58; font-style: italic; text-align: center; padding: 1.5rem !important; }
+
+    @media (max-width: 600px) {
+      .top-row { grid-template-columns: 1fr; }
+      .td-time { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span class="header-title">🤖 Nikola — Admin</span>
+    <a href="/admin/logout">Logout</a>
+  </div>
+
+  <!-- Speaking Now + Up Next -->
+  <div class="top-row" id="top-row">
+
+    <div class="panel" id="panel-current">
+      <div class="panel-label">
+        {% if current %}<span class="pulse"></span>{% endif %}
+        Speaking Now
+      </div>
+      {% if current %}
+        <div class="panel-name">{{ current.name }}</div>
+        <div class="panel-message">"{{ current.message }}"</div>
+      {% else %}
+        <div class="panel-empty">Idle — nothing playing</div>
+      {% endif %}
+    </div>
+
+    <div class="panel" id="panel-next">
+      <div class="panel-label">Up Next</div>
+      {% if next_up %}
+        <div class="panel-name">{{ next_up.name }}</div>
+        <div class="panel-message">"{{ next_up.message }}"</div>
+        <div class="panel-actions">
+          <button class="btn btn-red" onclick="decline(['{{ next_up.id }}'])">✗ Decline</button>
+        </div>
+      {% else %}
+        <div class="panel-empty">No approved prompts queued</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Pending Queue -->
+  <div class="section-header">
+    <span class="section-title" id="pending-title">Pending Queue ({{ pending|length }})</span>
+    <div class="section-actions">
+      <button class="btn btn-green" onclick="allowAll()">✓ Allow All</button>
+      <button class="btn btn-red"   onclick="declineAllPending()">✗ Decline All</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="td-check">
+            <input type="checkbox" id="check-all" onchange="toggleAll(this)">
+          </th>
+          <th>Name</th>
+          <th>Message</th>
+          <th>Time</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="pending-body">
+        {% for e in pending %}
+        <tr data-id="{{ e.id }}">
+          <td class="td-check"><input type="checkbox" class="row-check" value="{{ e.id }}"></td>
+          <td class="td-name">{{ e.name }}</td>
+          <td class="td-message">{{ e.message }}</td>
+          <td class="td-time">{{ e.timestamp[11:16] }}</td>
+          <td><div class="td-actions">
+            <button class="btn btn-green" onclick="allow(['{{ e.id }}'])">✓ Allow</button>
+            <button class="btn btn-red"   onclick="decline(['{{ e.id }}'])">✗ Decline</button>
+          </div></td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-cell" colspan="5">No pending messages</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="bulk-bar">
+      <div class="bulk-left">
+        <span class="bulk-count" id="bulk-count">0 selected</span>
+        <button class="btn btn-green" onclick="allowSelected()">✓ Allow Selected</button>
+        <button class="btn btn-red"   onclick="declineSelected()">✗ Decline Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="section-header">
+    <span class="section-title">History ({{ history|length }})</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Message</th>
+          <th>Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        {% for e in history %}
+        <tr>
+          <td class="td-name">{{ e.name }}</td>
+          <td class="td-message">{{ e.message }}</td>
+          <td class="td-time">{{ e.timestamp[11:16] }}</td>
+          <td>
+            {% if e.status == "done" %}
+              <span class="badge badge-done">✓ Done</span>
+            {% else %}
+              <span class="badge badge-declined">✗ Declined</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td class="empty-cell" colspan="4">No history yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // ── Selection tracking ───────────────────────────────────────────────────
+
+    document.addEventListener("change", e => {
+      if (e.target.classList.contains("row-check")) updateCount();
+    });
+
+    function updateCount() {
+      const n = document.querySelectorAll(".row-check:checked").length;
+      document.getElementById("bulk-count").textContent = n + " selected";
+    }
+
+    function toggleAll(master) {
+      document.querySelectorAll(".row-check").forEach(cb => cb.checked = master.checked);
+      updateCount();
+    }
+
+    function getSelected() {
+      return [...document.querySelectorAll(".row-check:checked")].map(cb => cb.value);
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────────
+
+    function allow(ids) {
+      post("/admin/allow", {ids}).then(refreshData);
+    }
+
+    function decline(ids) {
+      post("/admin/decline", {ids}).then(refreshData);
+    }
+
+    function allowSelected()  { const ids = getSelected(); if (ids.length) allow(ids);   }
+    function declineSelected(){ const ids = getSelected(); if (ids.length) decline(ids); }
+
+    function allowAll() {
+      post("/admin/allow-all", {}).then(refreshData);
+    }
+
+    function declineAllPending() {
+      const ids = [...document.querySelectorAll(".row-check")].map(cb => cb.value);
+      if (ids.length) decline(ids);
+    }
+
+    function post(url, body) {
+      return fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+    }
+
+    // ── Live refresh ─────────────────────────────────────────────────────────
+
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function refreshData() {
+      fetch("/admin/queue-data")
+        .then(r => r.json())
+        .then(data => {
+          renderTopRow(data.current, data.next_up);
+          renderPending(data.pending);
+          renderHistory(data.history);
+        })
+        .catch(() => {});
+    }
+
+    function renderTopRow(current, nextUp) {
+      const panelCurrent = document.getElementById("panel-current");
+      const panelNext    = document.getElementById("panel-next");
+
+      if (current) {
+        panelCurrent.innerHTML =
+          `<div class="panel-label"><span class="pulse"></span> Speaking Now</div>` +
+          `<div class="panel-name">${esc(current.name)}</div>` +
+          `<div class="panel-message">"${esc(current.message)}"</div>`;
+      } else {
+        panelCurrent.innerHTML =
+          `<div class="panel-label">Speaking Now</div>` +
+          `<div class="panel-empty">Idle — nothing playing</div>`;
+      }
+
+      if (nextUp) {
+        panelNext.innerHTML =
+          `<div class="panel-label">Up Next</div>` +
+          `<div class="panel-name">${esc(nextUp.name)}</div>` +
+          `<div class="panel-message">"${esc(nextUp.message)}"</div>` +
+          `<div class="panel-actions">` +
+          `<button class="btn btn-red" onclick="decline(['${nextUp.id}'])">✗ Decline</button>` +
+          `</div>`;
+      } else {
+        panelNext.innerHTML =
+          `<div class="panel-label">Up Next</div>` +
+          `<div class="panel-empty">No approved prompts queued</div>`;
+      }
+    }
+
+    function renderPending(pending) {
+      const tbody = document.getElementById("pending-body");
+      document.getElementById("pending-title").textContent = `Pending Queue (${pending.length})`;
+
+      if (!pending.length) {
+        tbody.innerHTML = `<tr><td class="empty-cell" colspan="5">No pending messages</td></tr>`;
+        updateCount();
+        return;
+      }
+
+      tbody.innerHTML = pending.map(e =>
+        `<tr data-id="${e.id}">` +
+        `<td class="td-check"><input type="checkbox" class="row-check" value="${e.id}"></td>` +
+        `<td class="td-name">${esc(e.name)}</td>` +
+        `<td class="td-message">${esc(e.message)}</td>` +
+        `<td class="td-time">${e.timestamp.slice(11,16)}</td>` +
+        `<td><div class="td-actions">` +
+        `<button class="btn btn-green" onclick="allow(['${e.id}'])">✓ Allow</button>` +
+        `<button class="btn btn-red" onclick="decline(['${e.id}'])">✗ Decline</button>` +
+        `</div></td>` +
+        `</tr>`
+      ).join("");
+
+      document.getElementById("check-all").checked = false;
+      updateCount();
+    }
+
+    function renderHistory(history) {
+      const tbody = document.getElementById("history-body");
+      if (!history.length) {
+        tbody.innerHTML = `<tr><td class="empty-cell" colspan="4">No history yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = history.map(e => {
+        const badge = e.status === "done"
+          ? `<span class="badge badge-done">✓ Done</span>`
+          : `<span class="badge badge-declined">✗ Declined</span>`;
+        return (
+          `<tr>` +
+          `<td class="td-name">${esc(e.name)}</td>` +
+          `<td class="td-message">${esc(e.message)}</td>` +
+          `<td class="td-time">${e.timestamp.slice(11,16)}</td>` +
+          `<td>${badge}</td>` +
+          `</tr>`
+        );
+      }).join("");
+    }
+
+    // Poll every 2 seconds
+    setInterval(refreshData, 2000);
+  </script>
+
+</body>
+</html>

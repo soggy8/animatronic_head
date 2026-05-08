@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Type to Nikola{% endblock %}
+
+{% block extra_style %}
+.queue-box {
+  text-align: center;
+  padding: 1.4rem 1rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  margin-top: 1.5rem;
+}
+
+.queue-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #58a6ff;
+  line-height: 1;
+}
+
+.queue-label {
+  font-size: 0.88rem;
+  color: #8b949e;
+  margin-top: 0.5rem;
+}
+
+.queue-label strong {
+  color: #e6edf3;
+}
+
+.sent-icon  { font-size: 2rem; text-align: center; margin-bottom: 0.4rem; }
+.sent-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin-bottom: 0.2rem; }
+.sent-sub   { font-size: 0.85rem; color: #8b949e; text-align: center; }
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="logo">💬</div>
+  <h1>Type to Nikola</h1>
+  <h2>Hi, {{ name }}</h2>
+
+  <hr class="divider">
+
+  {% if submitted %}
+
+    <div class="sent-icon">✉️</div>
+    <p class="sent-title">Your message was sent!</p>
+    <p class="sent-sub">Nikola will read it shortly.</p>
+
+    <div class="queue-box" id="queue-box">
+      {% if status == "processing" %}
+        <div class="queue-number">🔊</div>
+        <div class="queue-label">Nikola is speaking your message now!</div>
+
+      {% elif status == "done" %}
+        <div class="queue-number">✓</div>
+        <div class="queue-label">Nikola has read your message!</div>
+
+      {% elif status == "declined" %}
+        <div class="queue-number">—</div>
+        <div class="queue-label">Your message was not approved.</div>
+
+      {% elif status == "approved" %}
+        <div class="queue-number">👍</div>
+        <div class="queue-label">Approved! Almost your turn…</div>
+
+      {% else %}
+        {% if position > 0 %}
+          <div class="queue-number" id="q-num">{{ position }}</div>
+          <div class="queue-label" id="q-label">
+            You are number <strong>{{ position }}</strong> in queue
+          </div>
+        {% else %}
+          <div class="queue-number" id="q-num">—</div>
+          <div class="queue-label" id="q-label">Waiting for approval…</div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+  {% else %}
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/prompt">
+      <label for="message">Your message</label>
+      <textarea
+        id="message"
+        name="message"
+        placeholder="Type your message to Nikola…"
+        autofocus
+      ></textarea>
+      <button type="submit" class="btn btn-green">Send →</button>
+    </form>
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if submitted %}
+<script>
+  const INITIAL_STATUS = "{{ status }}";
+  let countdownStarted = false;
+
+  function startCountdown() {
+    if (countdownStarted) return;
+    countdownStarted = true;
+    let remaining = 30;
+    const box = document.getElementById("queue-box");
+
+    function tick() {
+      if (remaining <= 0) {
+        fetch("/reset-submission", { method: "POST" })
+          .then(() => { window.location.href = "/prompt"; });
+        return;
+      }
+      box.innerHTML =
+        '<div class="queue-number">' + remaining + '</div>' +
+        '<div class="queue-label">You can send a new message in ' + remaining + 's</div>';
+      remaining--;
+      setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  function render(status, position) {
+    const box = document.getElementById("queue-box");
+    if (!box) return;
+
+    if (status === "processing") {
+      box.innerHTML = '<div class="queue-number">🔊</div><div class="queue-label">Nikola is speaking your message now!</div>';
+    } else if (status === "done") {
+      box.innerHTML = '<div class="queue-number">✓</div><div class="queue-label">Nikola has read your message!</div>';
+      setTimeout(startCountdown, 1500);
+    } else if (status === "declined") {
+      box.innerHTML = '<div class="queue-number">—</div><div class="queue-label">Your message was not approved.</div>';
+      setTimeout(startCountdown, 1500);
+    } else if (status === "approved") {
+      box.innerHTML = '<div class="queue-number">👍</div><div class="queue-label">Approved! Almost your turn…</div>';
+    } else {
+      if (position > 0) {
+        box.innerHTML =
+          '<div class="queue-number">' + position + '</div>' +
+          '<div class="queue-label">You are number <strong>' + position + '</strong> in queue</div>';
+      } else {
+        box.innerHTML = '<div class="queue-number">—</div><div class="queue-label">Waiting for approval…</div>';
+      }
+    }
+  }
+
+  function poll() {
+    fetch("/queue-status")
+      .then(r => r.json())
+      .then(data => {
+        render(data.status, data.position);
+        if (data.status !== "done" && data.status !== "declined") {
+          setTimeout(poll, 3000);
+        }
+      })
+      .catch(() => setTimeout(poll, 5000));
+  }
+
+  if (INITIAL_STATUS === "done" || INITIAL_STATUS === "declined") {
+    setTimeout(startCountdown, 1500);
+  } else {
+    setTimeout(poll, 3000);
+  }
+</script>
+{% endif %}
+{% endblock %}
