@@ -1,0 +1,10 @@
+openai>=1.0.0
+SpeechRecognition>=3.10.0
+PyAudio>=0.2.14
+pyserial>=3.5
+numpy>=1.26.0
+pydub>=0.25.1
+requests>=2.31.0
+python-dotenv>=1.0.1
+opencv-python>=4.10.0
+mediapipe>=0.10.14
