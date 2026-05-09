@@ -32,6 +32,7 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "YOUR_ELEVENLABS_API_KEY_HE
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "YOUR_ELEVENLABS_VOICE_ID_HERE")
 SERIAL_PORT = os.getenv("SERIAL_PORT", "COM3")  # Example: COM5 on Windows, /dev/ttyUSB0 on Linux
 SERIAL_BAUD = int(os.getenv("SERIAL_BAUD", "115200"))
+SERIAL_WRITE_TIMEOUT = float(os.getenv("SERIAL_WRITE_TIMEOUT", "1.0"))
 USE_SERIAL = os.getenv("USE_SERIAL", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 # Jaw mapping
@@ -314,11 +315,16 @@ def serial_write_line(serial_conn: serial.Serial | None, serial_lock: threading.
     if serial_conn is None:
         return
     payload = f"{line}\n".encode("utf-8")
-    if serial_lock is not None:
-        with serial_lock:
+    try:
+        if serial_lock is not None:
+            with serial_lock:
+                serial_conn.write(payload)
+        else:
             serial_conn.write(payload)
-    else:
-        serial_conn.write(payload)
+    except serial.SerialTimeoutException:
+        print(f"[serial] write timeout — dropped: {line!r}")
+    except OSError as exc:
+        print(f"[serial] write failed: {exc} — dropped: {line!r}")
 
 
 def apply_lip_state(
@@ -430,8 +436,17 @@ def main() -> None:
     try:
         if USE_SERIAL:
             print(f"Opening serial port {SERIAL_PORT} at {SERIAL_BAUD}...")
-            ser = serial.Serial(SERIAL_PORT, SERIAL_BAUD, timeout=1)
+            ser = serial.Serial(
+                SERIAL_PORT,
+                SERIAL_BAUD,
+                timeout=1,
+                write_timeout=SERIAL_WRITE_TIMEOUT,
+            )
             time.sleep(2.0)
+            try:
+                ser.reset_input_buffer()
+            except Exception:
+                pass
             apply_lip_state("idle", ser, serial_lock)
             print("Ready with serial. Press Ctrl+C to stop.")
         else:
